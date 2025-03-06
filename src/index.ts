@@ -21,7 +21,7 @@ app.use(express.json());
 // ✅ CORS Configuration
 app.use(
   cors({
-    origin: "https://app.macroflow.io", // Allow frontend
+    origin: ["https://app.macroflow.io", "http://localhost:3000"], // Allow frontend
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true, // Allow cookies/tokens
@@ -30,7 +30,10 @@ app.use(
 
 // ✅ Handle Preflight Requests Manually (OPTIONS)
 app.options("*", (req, res) => {
-  res.header("Access-Control-Allow-Origin", "https://app.macroflow.io");
+  res.header(
+    "Access-Control-Allow-Origin",
+    "https://app.macroflow.io, http://localhost:3000"
+  );
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
   res.header("Access-Control-Allow-Credentials", "true");
