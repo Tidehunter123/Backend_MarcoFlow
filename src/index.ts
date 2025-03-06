@@ -7,7 +7,7 @@ import bodyParser from "body-parser";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3003;
+const PORT = Number(process.env.PORT) || 3003; // ✅ Convert to number
 
 app.use(
   bodyParser.json({
@@ -17,6 +17,7 @@ app.use(
   })
 );
 app.use(express.json());
+
 // ✅ CORS Configuration
 app.use(
   cors({
@@ -38,6 +39,6 @@ app.options("*", (req, res) => {
 
 app.use("/", routes);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server is running on port ${PORT}`);
 });
