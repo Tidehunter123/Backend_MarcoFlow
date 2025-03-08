@@ -150,12 +150,6 @@ export const createProfileData = async (userProfileData: UserData) => {
       .single(); // Ensure only one record is returned
 
     if (error) {
-      throw new Error(
-        `Error checking the existing Profile data: ${error.message}`
-      );
-    }
-
-    if (!data) {
       const { data: profileData, error: profileDataError } = await supabase
         .from("Profile")
         .insert({
@@ -350,20 +344,14 @@ export const createProfileData = async (userProfileData: UserData) => {
         .single(); // Ensure only one record is returned
 
     if (existingCalculationError) {
-      throw new Error(
-        `Error checking the existing Profile data: ${existingCalculationError.message}`
-      );
-    }
-
-    if (existingCalculationData) {
       const { data: CalculationData, error: CalculationDataError } =
         await supabase
           .from("CalculationData")
-          .update({
+          .insert({
+            id: userProfileData.id,
             json_data: jsonData,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", userProfileData.id)
           .select()
           .single();
 
