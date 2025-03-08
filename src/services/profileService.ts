@@ -12,7 +12,7 @@ interface UserData {
   mail: string;
   age: number;
   dateOfBirth: string;
-  gender: "male" | "female";
+  gender: "man" | "woman";
   height: number;
   weight: number;
   activityLevel: "sedentary" | "active" | "very_active";
@@ -206,7 +206,7 @@ export const createProfileData = async (userProfileData: UserData) => {
     }
 
     const bmr =
-      userProfileData.gender === "male"
+      userProfileData.gender === "man"
         ? 10 * userProfileData.weight +
           6.25 * userProfileData.height -
           5 * userProfileData.age +
@@ -314,7 +314,7 @@ export const createProfileData = async (userProfileData: UserData) => {
         Protein: Number(protein.toFixed(1)),
         Fats: Number(fats.toFixed(1)),
         Carbohydrates: Number(carbs.toFixed(1)),
-        Fibre: userProfileData.gender === "male" ? 35 : 25,
+        Fibre: userProfileData.gender === "man" ? 35 : 25,
         ...(userProfileData.calorieCycling
           ? {
               TrainingDayCalories: trainingDayCalories,

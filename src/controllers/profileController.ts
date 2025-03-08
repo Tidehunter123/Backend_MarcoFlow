@@ -15,7 +15,7 @@ interface UserData {
   mail: string;
   age: number;
   dateOfBirth: string;
-  gender: "male" | "female";
+  gender: "man" | "woman";
   height: number;
   weight: number;
   activityLevel: "sedentary" | "active" | "very_active";
