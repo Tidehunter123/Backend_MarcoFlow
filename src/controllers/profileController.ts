@@ -8,6 +8,38 @@ import {
   reactivateProfileData,
   createProfileData,
 } from "../services/profileService";
+import { UUID } from "crypto";
+
+interface UserData {
+  id: UUID;
+  mail: string;
+  age: number;
+  dateOfBirth: string;
+  gender: "male" | "female";
+  height: number;
+  weight: number;
+  activityLevel: "sedentary" | "active" | "very_active";
+  trainingHistory: "beginner" | "intermediate" | "advanced";
+  workoutsPerWeek: 3 | 4 | 5;
+  trainingGoal:
+    | "fat_loss"
+    | "muscle_gain"
+    | "recomposition"
+    | "strength_gain"
+    | "athletic_performance"
+    | "fitness_model";
+
+  mode: "fat_loss" | "muscle_gain";
+  selected?:
+    | "100g per week"
+    | "250g per week"
+    | "500g per week"
+    | "750g per week"
+    | "1kg per week";
+  selectedStyle: "balanced" | "low_carb" | "keto" | "low_fat";
+  calorieCycling?: boolean;
+  calorieBanking?: boolean;
+}
 
 // Define the getTagData function
 export const getMyProfileData = catchAsync(
@@ -81,7 +113,7 @@ export const reactivateMyProfileData = catchAsync(
 
 export const createProfile = catchAsync(async (req: Request, res: Response) => {
   try {
-    const userProfileData = req.body; // Use req.body to capture profile fields
+    const userProfileData: UserData = req.body; // Use req.body to capture profile fields
     console.log(userProfileData, "userProfileData");
 
     // Call updateProfileData without redeclaring types
