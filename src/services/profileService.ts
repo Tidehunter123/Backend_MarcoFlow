@@ -39,6 +39,12 @@ interface UserData {
   calorieBanking?: boolean;
 }
 
+interface MacroResult {
+  protein: number;
+  fats: number;
+  carbs: number;
+}
+
 interface MacroflowOutput {
   summary: {
     BMR: number;
@@ -77,6 +83,46 @@ const calculateAge = (dob: string): number => {
 
   console.log("Final calculated age:", age);
   return age;
+};
+
+const calculateMacros = (
+  targetCalories: number,
+  weight: number,
+  style: string
+): MacroResult => {
+  let proteinFactor: number, fatRatio: number;
+
+  switch (style) {
+    case "balanced":
+      proteinFactor = 2;
+      fatRatio = 0.25;
+      break;
+    case "low_carb":
+      proteinFactor = 2.2;
+      fatRatio = 0.35;
+      break;
+    case "keto":
+      proteinFactor = 1.6;
+      fatRatio = 0.7;
+      break;
+    case "low_fat":
+      proteinFactor = 2.2;
+      fatRatio = 0.15;
+      break;
+    default:
+      throw new Error("Invalid nutrition preference");
+  }
+
+  const protein = proteinFactor * weight;
+  const fatCalories = targetCalories * fatRatio;
+  const fats = fatCalories / 9;
+
+  let carbs = (targetCalories - protein * 4 - fatCalories) / 4;
+  if (style === "keto") {
+    carbs = Math.min(50, carbs);
+  }
+
+  return { protein, fats, carbs };
 };
 
 // Example usage
@@ -337,6 +383,36 @@ export const createProfileData = async (userProfileData: UserData) => {
         throw new Error("Invalid nutrition preference");
     }
 
+    let trainingMacros, restMacros;
+
+    if (userProfileData.calorieCycling) {
+      trainingMacros = calculateMacros(
+        trainingDayCalories,
+        userProfileData.weight,
+        userProfileData.selectedStyle
+      );
+      restMacros = calculateMacros(
+        restDayCalories,
+        userProfileData.weight,
+        userProfileData.selectedStyle
+      );
+    }
+
+    let weekdayMacros, weekendMacros;
+
+    if (userProfileData.calorieBanking) {
+      weekdayMacros = calculateMacros(
+        weekdayCalories,
+        userProfileData.weight,
+        userProfileData.selectedStyle
+      );
+      weekendMacros = calculateMacros(
+        weekendCalories,
+        userProfileData.weight,
+        userProfileData.selectedStyle
+      );
+    }
+
     const jsonData: MacroflowOutput = {
       summary: {
         BMR: bmr,
@@ -350,19 +426,51 @@ export const createProfileData = async (userProfileData: UserData) => {
           ? {
               TrainingDayCalories: trainingDayCalories,
               RestDayCalories: restDayCalories,
+              Training_Protein: trainingMacros?.protein,
+              Training_Fats: trainingMacros?.fats,
+              Training_Carbohydrates: trainingMacros?.carbs,
+              Training_Fibre: userProfileData.gender === "man" ? 35 : 25,
+              Rest_Protein: restMacros?.protein,
+              Rest_Fats: restMacros?.fats,
+              Rest_Carbohydrates: restMacros?.carbs,
+              Rest_Fibre: userProfileData.gender === "man" ? 35 : 25,
             }
           : {
               TrainingDayCalories: null,
               RestDayCalories: null,
+              Training_Protein: null,
+              Training_Fats: null,
+              Training_Carbohydrates: null,
+              Training_Fibre: null,
+              Rest_Protein: null,
+              Rest_Fats: null,
+              Rest_Carbohydrates: null,
+              Rest_Fibre: null,
             }),
         ...(userProfileData.calorieBanking
           ? {
               WeekdayCalories: weekdayCalories,
               WeekendCalories: weekendCalories,
+              Weekday_Protein: weekdayMacros?.protein,
+              Weekday_Fats: weekdayMacros?.fats,
+              Weekday_Carbohydrates: weekdayMacros?.carbs,
+              Weekday_Fibre: userProfileData.gender === "man" ? 35 : 25,
+              Weekend_Protein: weekendMacros?.protein,
+              Weekend_Fats: weekendMacros?.fats,
+              Weekend_Carbohydrates: weekendMacros?.carbs,
+              Weekend_Fibre: userProfileData.gender === "man" ? 35 : 25,
             }
           : {
               WeekdayCalories: null,
               WeekendCalories: null,
+              Weekday_Protein: null,
+              Weekday_Fats: null,
+              Weekday_Carbohydrates: null,
+              Weekday_Fibre: null,
+              Weekend_Protein: null,
+              Weekend_Fats: null,
+              Weekend_Carbohydrates: null,
+              Weekend_Fibre: null,
             }),
       },
     };
@@ -550,6 +658,36 @@ export const updateProfileData = async (userProfileData: any) => {
           throw new Error("Invalid nutrition preference");
       }
 
+      let trainingMacros, restMacros;
+
+      if (profileData.calorieCycling) {
+        trainingMacros = calculateMacros(
+          trainingDayCalories,
+          profileData.weight,
+          profileData.nutrition_style
+        );
+        restMacros = calculateMacros(
+          restDayCalories,
+          profileData.weight,
+          profileData.nutrition_style
+        );
+      }
+
+      let weekdayMacros, weekendMacros;
+
+      if (profileData.calorieBanking) {
+        weekdayMacros = calculateMacros(
+          weekdayCalories,
+          profileData.weight,
+          profileData.nutrition_style
+        );
+        weekendMacros = calculateMacros(
+          weekendCalories,
+          profileData.weight,
+          profileData.nutrition_style
+        );
+      }
+
       const jsonData: MacroflowOutput = {
         summary: {
           BMR: bmr,
@@ -563,19 +701,51 @@ export const updateProfileData = async (userProfileData: any) => {
             ? {
                 TrainingDayCalories: trainingDayCalories,
                 RestDayCalories: restDayCalories,
+                Training_Protein: trainingMacros?.protein,
+                Training_Fats: trainingMacros?.fats,
+                Training_Carbohydrates: trainingMacros?.carbs,
+                Training_Fibre: profileData.gender === "man" ? 35 : 25,
+                Rest_Protein: restMacros?.protein,
+                Rest_Fats: restMacros?.fats,
+                Rest_Carbohydrates: restMacros?.carbs,
+                Rest_Fibre: profileData.gender === "man" ? 35 : 25,
               }
             : {
                 TrainingDayCalories: null,
                 RestDayCalories: null,
+                Training_Protein: null,
+                Training_Fats: null,
+                Training_Carbohydrates: null,
+                Training_Fibre: null,
+                Rest_Protein: null,
+                Rest_Fats: null,
+                Rest_Carbohydrates: null,
+                Rest_Fibre: null,
               }),
           ...(profileData.calorieBanking
             ? {
                 WeekdayCalories: weekdayCalories,
                 WeekendCalories: weekendCalories,
+                Weekday_Protein: weekdayMacros?.protein,
+                Weekday_Fats: weekdayMacros?.fats,
+                Weekday_Carbohydrates: weekdayMacros?.carbs,
+                Weekday_Fibre: profileData.gender === "man" ? 35 : 25,
+                Weekend_Protein: weekendMacros?.protein,
+                Weekend_Fats: weekendMacros?.fats,
+                Weekend_Carbohydrates: weekendMacros?.carbs,
+                Weekend_Fibre: profileData.gender === "man" ? 35 : 25,
               }
             : {
                 WeekdayCalories: null,
                 WeekendCalories: null,
+                Weekday_Protein: null,
+                Weekday_Fats: null,
+                Weekday_Carbohydrates: null,
+                Weekday_Fibre: null,
+                Weekend_Protein: null,
+                Weekend_Fats: null,
+                Weekend_Carbohydrates: null,
+                Weekend_Fibre: null,
               }),
         },
       };
