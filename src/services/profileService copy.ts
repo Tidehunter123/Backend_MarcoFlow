@@ -141,294 +141,7 @@ export const getProfileData = async () => {
   return data;
 };
 
-export const getProfileDataByProfileId = async (
-  profileId: string,
-  type: number
-) => {
-  // Fetch Profile Data
-  const { data: profileData, error: profileDataError } = await supabase
-    .from("Profile")
-    .select()
-    .eq("id", profileId)
-    .single();
-
-  if (profileDataError) {
-    throw new Error(`Error fetching Profile data: ${profileDataError.message}`);
-  }
-
-  console.log(profileData, "profileData");
-
-  const age = calculateAge(profileData.date_of_birth);
-  console.log(age, "age");
-
-  if (!profileData?.gender) {
-    return null;
-  }
-
-  const initialWeight = profileData.weight; // Starting weight, e.g., 90kg
-  const weeks = 41;
-  let currentWeight = initialWeight;
-  const simulationOutput = [];
-
-  for (let week = 0; week < weeks; week++) {
-    // Calculate BMR using currentWeight
-    const bmr =
-      profileData.gender === "man"
-        ? 10 * currentWeight + 6.25 * profileData.height - 5 * age + 5
-        : 10 * currentWeight + 6.25 * profileData.height - 5 * age - 161;
-
-    // Calculate TDEE
-    const activityMultipliers = {
-      sedentary: 1.13,
-      active: 1.25,
-      very_active: 1.4,
-    };
-    let tdee =
-      bmr *
-      activityMultipliers[
-        profileData.activity_level as keyof typeof activityMultipliers
-      ];
-
-    // Add workout calories
-    const workoutCalories = {
-      beginner: 300,
-      intermediate: 330,
-      advanced: 360,
-    };
-    const caloriesPerWorkout =
-      workoutCalories[
-        profileData.training_history as keyof typeof workoutCalories
-      ];
-    tdee += (caloriesPerWorkout * profileData.workouts_per_week) / 7;
-
-    // Adjust targetCalories based on rate_weight_change
-    const weightChangeCalories = {
-      fat_loss: {
-        "100g per week": -770,
-        "250g per week": -1925,
-        "500g per week": -3850,
-        "750g per week": -5775,
-        "1kg per week": -7700,
-      },
-      muscle_gain: {
-        "100g per week": 770,
-        "250g per week": 1925,
-        "500g per week": 3850,
-        "750g per week": 5775,
-        "1kg per week": -7700,
-      },
-    };
-
-    const goalDefaults = {
-      fat_loss: 0.85,
-      muscle_gain: 1.05,
-      recomposition: 0.9,
-      strength_gain: 1.0,
-      athletic_performance: 1.0,
-      fitness_model: 0.9,
-    };
-
-    const rate_weight_change = profileData.rate_weight_change as string;
-    const [mode, selected] = rate_weight_change.split(/ (.+)/) as [
-      "fat_loss" | "muscle_gain",
-      (
-        | "100g per week"
-        | "250g per week"
-        | "500g per week"
-        | "750g per week"
-        | "1kg per week"
-      )
-    ];
-
-    let targetCalories =
-      rate_weight_change !== "None" &&
-      weightChangeCalories[mode]?.[selected] !== undefined
-        ? tdee + weightChangeCalories[mode][selected] / 7
-        : tdee *
-          goalDefaults[profileData.training_goal as keyof typeof goalDefaults];
-
-    // Handle calorie cycling and banking
-    let trainingDayCalories = targetCalories;
-    let restDayCalories = targetCalories;
-    let weekdayCalories = targetCalories;
-    let weekendCalories = targetCalories;
-    if (profileData.calorieCycling) {
-      trainingDayCalories = targetCalories * 1.1;
-      restDayCalories = targetCalories * 0.9;
-    }
-    if (profileData.calorieBanking) {
-      weekdayCalories = targetCalories * 0.9;
-      weekendCalories = targetCalories * 1.1;
-    }
-
-    // Calculate macros
-    let protein: number, fats: number, carbs: number;
-    switch (profileData.nutrition_style) {
-      case "balanced":
-        protein = 2 * currentWeight;
-        fats = (targetCalories * 0.25) / 9;
-        carbs = (targetCalories - protein * 4 - fats * 9) / 4;
-        break;
-      case "low_carb":
-        protein = 2.2 * currentWeight;
-        fats = (targetCalories * 0.35) / 9;
-        carbs = (targetCalories - protein * 4 - fats * 9) / 4;
-        break;
-      case "keto":
-        protein = 1.6 * currentWeight;
-        fats = (targetCalories * 0.7) / 9;
-        carbs = Math.min(50, (targetCalories - protein * 4 - fats * 9) / 4);
-        break;
-      case "low_fat":
-        protein = 2.2 * currentWeight;
-        fats = (targetCalories * 0.15) / 9;
-        carbs = (targetCalories - protein * 4 - fats * 9) / 4;
-        break;
-      default:
-        throw new Error("Invalid nutrition preference");
-    }
-
-    // Prepare weekly data
-    const weekData = {
-      Week: week,
-      Weight: Number(currentWeight).toFixed(1),
-      BMR: bmr,
-      Total_Maintenance_Calories: tdee,
-      Target_Calories: targetCalories,
-      Protein: Number(protein.toFixed(1)),
-      Fats: Number(fats.toFixed(1)),
-      Carbohydrates: Number(carbs.toFixed(1)),
-      Fibre: profileData.gender === "man" ? 35 : 25,
-      TrainingDayCalories: profileData.calorieCycling
-        ? trainingDayCalories
-        : null,
-      RestDayCalories: profileData.calorieCycling ? restDayCalories : null,
-      Training_Protein: profileData.calorieCycling
-        ? Number((2 * currentWeight).toFixed(1))
-        : null,
-      Training_Fats: profileData.calorieCycling
-        ? Number(((trainingDayCalories * 0.25) / 9).toFixed(1))
-        : null,
-      Training_Carbohydrates: profileData.calorieCycling
-        ? Number(
-            (
-              (trainingDayCalories -
-                2 * currentWeight * 4 -
-                trainingDayCalories * 0.25) /
-              4
-            ).toFixed(1)
-          )
-        : null,
-      Training_Fibre: profileData.calorieCycling
-        ? profileData.gender === "man"
-          ? 35
-          : 25
-        : null,
-      Rest_Protein: profileData.calorieCycling
-        ? Number((2 * currentWeight).toFixed(1))
-        : null,
-      Rest_Fats: profileData.calorieCycling
-        ? Number(((restDayCalories * 0.25) / 9).toFixed(1))
-        : null,
-      Rest_Carbohydrates: profileData.calorieCycling
-        ? Number(
-            (
-              (restDayCalories -
-                2 * currentWeight * 4 -
-                restDayCalories * 0.25) /
-              4
-            ).toFixed(1)
-          )
-        : null,
-      Rest_Fibre: profileData.calorieCycling
-        ? profileData.gender === "man"
-          ? 35
-          : 25
-        : null,
-      WeekdayCalories: profileData.calorieBanking ? weekdayCalories : null,
-      WeekendCalories: profileData.calorieBanking ? weekendCalories : null,
-      Weekday_Protein: profileData.calorieBanking
-        ? Number((2 * currentWeight).toFixed(1))
-        : null,
-      Weekday_Fats: profileData.calorieBanking
-        ? Number(((weekdayCalories * 0.25) / 9).toFixed(1))
-        : null,
-      Weekday_Carbohydrates: profileData.calorieBanking
-        ? Number(
-            (
-              (weekdayCalories -
-                2 * currentWeight * 4 -
-                weekdayCalories * 0.25) /
-              4
-            ).toFixed(1)
-          )
-        : null,
-      Weekday_Fibre: profileData.calorieBanking
-        ? profileData.gender === "man"
-          ? 35
-          : 25
-        : null,
-      Weekend_Protein: profileData.calorieBanking
-        ? Number((2 * currentWeight).toFixed(1))
-        : null,
-      Weekend_Fats: profileData.calorieBanking
-        ? Number(((weekendCalories * 0.25) / 9).toFixed(1))
-        : null,
-      Weekend_Carbohydrates: profileData.calorieBanking
-        ? Number(
-            (
-              (weekendCalories -
-                2 * currentWeight * 4 -
-                weekendCalories * 0.25) /
-              4
-            ).toFixed(1)
-          )
-        : null,
-      Weekend_Fibre: profileData.calorieBanking
-        ? profileData.gender === "man"
-          ? 35
-          : 25
-        : null,
-    };
-
-    simulationOutput.push(weekData);
-
-    if (type === 1) {
-      currentWeight *= 0.995;
-    } else if (type === 2) {
-      currentWeight *= 0.99;
-    } else if (type === 3) {
-      currentWeight *= 1.005;
-    } else if (type === 4) {
-      currentWeight *= 1.0075;
-    }
-  }
-
-  // console.log(simulationOutput, "simulationOutput");
-
-  return { data: simulationOutput, Profile: profileData };
-
-  // // Fetch Calculation Data
-  // const { data: CalculationData, error: CalculationDataError } = await supabase
-  //   .from("CalculationData")
-  //   .select("*")
-  //   .eq("id", profileId)
-  //   .order("created_at", { ascending: true })
-  //   .single(); // Use .single() to fetch a single row
-
-  // if (CalculationDataError) {
-  //   throw new Error(
-  //     `Error fetching calculation data: ${CalculationDataError.message}`
-  //   );
-  // }
-
-  // Check if data exists
-  // if (!ProfileData || !CalculationData) {
-  //   throw new Error("No data found for the given profile ID");
-  // }
-};
-
-export const getSummaryDataByProfileId = async (profileId: string) => {
+export const getProfileDataByProfileId = async (profileId: string) => {
   // Fetch Profile Data
   const { data: ProfileData, error: ProfileError } = await supabase
     .from("Profile")
@@ -834,14 +547,8 @@ export const updateProfileData = async (userProfileData: any) => {
     if (profileData?.gender) {
       const bmr =
         profileData.gender === "man"
-          ? 10 * userProfileData.weight +
-            6.25 * profileData.height -
-            5 * age +
-            5
-          : 10 * userProfileData.weight +
-            6.25 * profileData.height -
-            5 * age -
-            161;
+          ? 10 * profileData.weight + 6.25 * profileData.height - 5 * age + 5
+          : 10 * profileData.weight + 6.25 * profileData.height - 5 * age - 161;
 
       const activityMultipliers = {
         sedentary: 1.13,
@@ -928,22 +635,22 @@ export const updateProfileData = async (userProfileData: any) => {
       let protein: number, fats: number, carbs: number;
       switch (profileData.nutrition_style) {
         case "balanced":
-          protein = 2 * userProfileData.weight;
+          protein = 2 * profileData.weight;
           fats = (targetCalories * 0.25) / 9;
           carbs = (targetCalories - protein * 4 - fats * 9) / 4;
           break;
         case "low_carb":
-          protein = 2.2 * userProfileData.weight;
+          protein = 2.2 * profileData.weight;
           fats = (targetCalories * 0.35) / 9;
           carbs = (targetCalories - protein * 4 - fats * 9) / 4;
           break;
         case "keto":
-          protein = 1.6 * userProfileData.weight;
+          protein = 1.6 * profileData.weight;
           fats = (targetCalories * 0.7) / 9;
           carbs = Math.min(50, (targetCalories - protein * 4 - fats * 9) / 4);
           break;
         case "low_fat":
-          protein = 2.2 * userProfileData.weight;
+          protein = 2.2 * profileData.weight;
           fats = (targetCalories * 0.15) / 9;
           carbs = (targetCalories - protein * 4 - fats * 9) / 4;
           break;
@@ -956,12 +663,12 @@ export const updateProfileData = async (userProfileData: any) => {
       if (profileData.calorieCycling) {
         trainingMacros = calculateMacros(
           trainingDayCalories,
-          userProfileData.weight,
+          profileData.weight,
           profileData.nutrition_style
         );
         restMacros = calculateMacros(
           restDayCalories,
-          userProfileData.weight,
+          profileData.weight,
           profileData.nutrition_style
         );
       }
@@ -971,12 +678,12 @@ export const updateProfileData = async (userProfileData: any) => {
       if (profileData.calorieBanking) {
         weekdayMacros = calculateMacros(
           weekdayCalories,
-          userProfileData.weight,
+          profileData.weight,
           profileData.nutrition_style
         );
         weekendMacros = calculateMacros(
           weekendCalories,
-          userProfileData.weight,
+          profileData.weight,
           profileData.nutrition_style
         );
       }
@@ -1095,5 +802,4 @@ module.exports = {
   getMyBlockListById,
   reactivateProfileData,
   createProfileData,
-  getSummaryDataByProfileId,
 };

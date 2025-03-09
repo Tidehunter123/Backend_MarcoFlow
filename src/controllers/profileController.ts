@@ -7,6 +7,7 @@ import {
   getMyBlockListById,
   reactivateProfileData,
   createProfileData,
+  getSummaryDataByProfileId,
 } from "../services/profileService";
 import { UUID } from "crypto";
 
@@ -57,13 +58,30 @@ export const getMyProfileData = catchAsync(
   }
 );
 
-export const getProfileDataById = catchAsync(
+export const getSummaryDataById = catchAsync(
   async (req: Request, res: Response) => {
     try {
       const { profileId } = req.params;
       console.log(profileId, "profileid");
-      const result = await getProfileDataByProfileId(profileId);
+      const result = await getSummaryDataByProfileId(profileId);
       console.log(result, "result");
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ message: "Error fetching profile data by profile id" });
+    }
+  }
+);
+
+export const getProfileDataById = catchAsync(
+  async (req: Request, res: Response) => {
+    try {
+      const { id, type } = req.body;
+      console.log(id, "profileid", type, "type", typeof type);
+      const result = await getProfileDataByProfileId(id, type);
+      // console.log(result, "result");
       res.status(200).json(result);
     } catch (error) {
       console.error(error);
@@ -150,4 +168,5 @@ module.exports = {
   reactivateMyProfileData,
   createProfile,
   updateProfile,
+  getSummaryDataById,
 };
