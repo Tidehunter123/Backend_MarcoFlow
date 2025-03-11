@@ -88,7 +88,8 @@ const calculateAge = (dob: string): number => {
 const calculateMacros = (
   targetCalories: number,
   weight: number,
-  style: string
+  style: string,
+  gender: string
 ): MacroResult => {
   let proteinFactor: number, fatRatio: number;
 
@@ -114,7 +115,10 @@ const calculateMacros = (
   }
 
   const protein = proteinFactor * weight;
-  const fatCalories = targetCalories * fatRatio;
+  const fatCalories = Math.max(
+    targetCalories * fatRatio,
+    (gender === "man" ? 50 : 40) * 9
+  );
   const fats = fatCalories / 9;
 
   let carbs = (targetCalories - protein * 4 - fatCalories) / 4;
@@ -215,7 +219,7 @@ export const getProfileDataByProfileId = async (
         "250g per week": 1925,
         "500g per week": 3850,
         "750g per week": 5775,
-        "1kg per week": -7700,
+        "1kg per week": 7700,
       },
     };
 
@@ -252,13 +256,27 @@ export const getProfileDataByProfileId = async (
     let restDayCalories = targetCalories;
     let weekdayCalories = targetCalories;
     let weekendCalories = targetCalories;
+    let averageCalories;
     if (profileData.calorieCycling) {
-      trainingDayCalories = targetCalories * 1.1;
-      restDayCalories = targetCalories * 0.9;
+      const trainingDays = profileData.workouts_per_week;
+      const restDays = 7 - trainingDays;
+      const trainingDayFactor = 7 / (2 * trainingDays + restDays);
+      const restDayFactor = 7 / (2 * restDays + trainingDays);
+      trainingDayCalories = targetCalories * (1 + trainingDayFactor);
+      restDayCalories = targetCalories * (1 - restDayFactor);
+      const weekly_calories =
+        trainingDayCalories * trainingDays + restDayCalories * restDays;
+      averageCalories = weekly_calories / 7;
     }
     if (profileData.calorieBanking) {
-      weekdayCalories = targetCalories * 0.9;
-      weekendCalories = targetCalories * 1.1;
+      weekdayCalories = targetCalories * 0.85;
+      weekendCalories = targetCalories * 1.3;
+
+      const minWeekdayCalories = targetCalories - 250;
+      if (weekdayCalories < minWeekdayCalories) {
+        weekdayCalories = minWeekdayCalories;
+        weekendCalories = (7 * targetCalories - weekdayCalories * 5) / 2;
+      }
     }
 
     // Calculate macros
@@ -266,26 +284,75 @@ export const getProfileDataByProfileId = async (
     switch (profileData.nutrition_style) {
       case "balanced":
         protein = 2 * currentWeight;
-        fats = (targetCalories * 0.25) / 9;
+        fats =
+          Math.max(
+            targetCalories * 0.25,
+            (profileData.gender === "man" ? 50 : 40) * 9
+          ) / 9;
         carbs = (targetCalories - protein * 4 - fats * 9) / 4;
         break;
       case "low_carb":
         protein = 2.2 * currentWeight;
-        fats = (targetCalories * 0.35) / 9;
+        fats =
+          Math.max(
+            targetCalories * 0.35,
+            (profileData.gender === "man" ? 50 : 40) * 9
+          ) / 9;
         carbs = (targetCalories - protein * 4 - fats * 9) / 4;
         break;
       case "keto":
         protein = 1.6 * currentWeight;
-        fats = (targetCalories * 0.7) / 9;
+        fats =
+          Math.max(
+            targetCalories * 0.7,
+            (profileData.gender === "man" ? 50 : 40) * 9
+          ) / 9;
         carbs = Math.min(50, (targetCalories - protein * 4 - fats * 9) / 4);
         break;
       case "low_fat":
         protein = 2.2 * currentWeight;
-        fats = (targetCalories * 0.15) / 9;
+        fats =
+          Math.max(
+            targetCalories * 0.15,
+            (profileData.gender === "man" ? 50 : 40) * 9
+          ) / 9;
         carbs = (targetCalories - protein * 4 - fats * 9) / 4;
         break;
       default:
         throw new Error("Invalid nutrition preference");
+    }
+
+    let trainingMacros, restMacros;
+    if (profileData.calorieCycling) {
+      trainingMacros = calculateMacros(
+        trainingDayCalories,
+        profileData.weight,
+        profileData.selectedStyle,
+        profileData.gender
+      );
+      restMacros = calculateMacros(
+        restDayCalories,
+        profileData.weight,
+        profileData.selectedStyle,
+        profileData.gender
+      );
+    }
+
+    let weekdayMacros, weekendMacros;
+
+    if (profileData.calorieBanking) {
+      weekdayMacros = calculateMacros(
+        weekdayCalories,
+        profileData.weight,
+        profileData.selectedStyle,
+        profileData.gender
+      );
+      weekendMacros = calculateMacros(
+        weekendCalories,
+        profileData.weight,
+        profileData.selectedStyle,
+        profileData.gender
+      );
     }
 
     // Prepare weekly data
@@ -299,96 +366,58 @@ export const getProfileDataByProfileId = async (
       Fats: Number(fats.toFixed(1)),
       Carbohydrates: Number(carbs.toFixed(1)),
       Fibre: profileData.gender === "man" ? 35 : 25,
-      TrainingDayCalories: profileData.calorieCycling
-        ? trainingDayCalories
-        : null,
-      RestDayCalories: profileData.calorieCycling ? restDayCalories : null,
-      Training_Protein: profileData.calorieCycling
-        ? Number((2 * currentWeight).toFixed(1))
-        : null,
-      Training_Fats: profileData.calorieCycling
-        ? Number(((trainingDayCalories * 0.25) / 9).toFixed(1))
-        : null,
-      Training_Carbohydrates: profileData.calorieCycling
-        ? Number(
-            (
-              (trainingDayCalories -
-                2 * currentWeight * 4 -
-                trainingDayCalories * 0.25) /
-              4
-            ).toFixed(1)
-          )
-        : null,
-      Training_Fibre: profileData.calorieCycling
-        ? profileData.gender === "man"
-          ? 35
-          : 25
-        : null,
-      Rest_Protein: profileData.calorieCycling
-        ? Number((2 * currentWeight).toFixed(1))
-        : null,
-      Rest_Fats: profileData.calorieCycling
-        ? Number(((restDayCalories * 0.25) / 9).toFixed(1))
-        : null,
-      Rest_Carbohydrates: profileData.calorieCycling
-        ? Number(
-            (
-              (restDayCalories -
-                2 * currentWeight * 4 -
-                restDayCalories * 0.25) /
-              4
-            ).toFixed(1)
-          )
-        : null,
-      Rest_Fibre: profileData.calorieCycling
-        ? profileData.gender === "man"
-          ? 35
-          : 25
-        : null,
-      WeekdayCalories: profileData.calorieBanking ? weekdayCalories : null,
-      WeekendCalories: profileData.calorieBanking ? weekendCalories : null,
-      Weekday_Protein: profileData.calorieBanking
-        ? Number((2 * currentWeight).toFixed(1))
-        : null,
-      Weekday_Fats: profileData.calorieBanking
-        ? Number(((weekdayCalories * 0.25) / 9).toFixed(1))
-        : null,
-      Weekday_Carbohydrates: profileData.calorieBanking
-        ? Number(
-            (
-              (weekdayCalories -
-                2 * currentWeight * 4 -
-                weekdayCalories * 0.25) /
-              4
-            ).toFixed(1)
-          )
-        : null,
-      Weekday_Fibre: profileData.calorieBanking
-        ? profileData.gender === "man"
-          ? 35
-          : 25
-        : null,
-      Weekend_Protein: profileData.calorieBanking
-        ? Number((2 * currentWeight).toFixed(1))
-        : null,
-      Weekend_Fats: profileData.calorieBanking
-        ? Number(((weekendCalories * 0.25) / 9).toFixed(1))
-        : null,
-      Weekend_Carbohydrates: profileData.calorieBanking
-        ? Number(
-            (
-              (weekendCalories -
-                2 * currentWeight * 4 -
-                weekendCalories * 0.25) /
-              4
-            ).toFixed(1)
-          )
-        : null,
-      Weekend_Fibre: profileData.calorieBanking
-        ? profileData.gender === "man"
-          ? 35
-          : 25
-        : null,
+      ...(profileData.calorieCycling
+        ? {
+            TrainingDayCalories: trainingDayCalories,
+            RestDayCalories: restDayCalories,
+            AverageCalories: averageCalories,
+            Training_Protein: trainingMacros?.protein,
+            Training_Fats: trainingMacros?.fats,
+            Training_Carbohydrates: trainingMacros?.carbs,
+            Training_Fibre: profileData.gender === "man" ? 35 : 25,
+            Rest_Protein: restMacros?.protein,
+            Rest_Fats: restMacros?.fats,
+            Rest_Carbohydrates: restMacros?.carbs,
+            Rest_Fibre: profileData.gender === "man" ? 35 : 25,
+          }
+        : {
+            TrainingDayCalories: null,
+            RestDayCalories: null,
+            AverageCalories: null,
+            Training_Protein: null,
+            Training_Fats: null,
+            Training_Carbohydrates: null,
+            Training_Fibre: null,
+            Rest_Protein: null,
+            Rest_Fats: null,
+            Rest_Carbohydrates: null,
+            Rest_Fibre: null,
+          }),
+      ...(profileData.calorieBanking
+        ? {
+            WeekdayCalories: weekdayCalories,
+            WeekendCalories: weekendCalories,
+            Weekday_Protein: weekdayMacros?.protein,
+            Weekday_Fats: weekdayMacros?.fats,
+            Weekday_Carbohydrates: weekdayMacros?.carbs,
+            Weekday_Fibre: profileData.gender === "man" ? 35 : 25,
+            Weekend_Protein: weekendMacros?.protein,
+            Weekend_Fats: weekendMacros?.fats,
+            Weekend_Carbohydrates: weekendMacros?.carbs,
+            Weekend_Fibre: profileData.gender === "man" ? 35 : 25,
+          }
+        : {
+            WeekdayCalories: null,
+            WeekendCalories: null,
+            Weekday_Protein: null,
+            Weekday_Fats: null,
+            Weekday_Carbohydrates: null,
+            Weekday_Fibre: null,
+            Weekend_Protein: null,
+            Weekend_Fats: null,
+            Weekend_Carbohydrates: null,
+            Weekend_Fibre: null,
+          }),
     };
 
     simulationOutput.push(weekData);
@@ -608,7 +637,7 @@ export const createProfileData = async (userProfileData: UserData) => {
         "250g per week": 1925,
         "500g per week": 3850,
         "750g per week": 5775,
-        "1kg per week": -7700,
+        "1kg per week": 7700,
       },
     };
 
@@ -635,35 +664,67 @@ export const createProfileData = async (userProfileData: UserData) => {
     let restDayCalories = targetCalories;
     let weekdayCalories = targetCalories;
     let weekendCalories = targetCalories;
+    let averageCalories;
     if (userProfileData.calorieCycling) {
-      trainingDayCalories = targetCalories * 1.1;
-      restDayCalories = targetCalories * 0.9;
+      const training_days = userProfileData.workoutsPerWeek;
+      const rest_days = 7 - training_days;
+
+      const training_day_factor = 7 / (2 * training_days + rest_days);
+      const rest_day_factor = 7 / (2 * rest_days + training_days);
+
+      trainingDayCalories = targetCalories * (1 + training_day_factor);
+      restDayCalories = targetCalories * (1 - rest_day_factor);
+
+      const weekly_calories =
+        trainingDayCalories * training_days + restDayCalories * rest_days;
+      averageCalories = weekly_calories / 7;
     }
     if (userProfileData.calorieBanking) {
-      weekdayCalories = targetCalories * 0.9;
-      weekendCalories = targetCalories * 1.1;
+      weekdayCalories = targetCalories * 0.85;
+      weekendCalories = targetCalories * 1.3;
+      const minWeekdayCalories = targetCalories - 250;
+      if (weekdayCalories < minWeekdayCalories) {
+        weekdayCalories = minWeekdayCalories;
+        weekendCalories = (7 * targetCalories - weekdayCalories * 5) / 2;
+      }
     }
 
     let protein: number, fats: number, carbs: number;
     switch (userProfileData.selectedStyle) {
       case "balanced":
         protein = 2 * userProfileData.weight;
-        fats = (targetCalories * 0.25) / 9;
+        fats =
+          Math.max(
+            targetCalories * 0.25,
+            (userProfileData.gender === "man" ? 50 : 40) * 9
+          ) / 9;
         carbs = (targetCalories - protein * 4 - fats * 9) / 4;
         break;
       case "low_carb":
         protein = 2.2 * userProfileData.weight;
-        fats = (targetCalories * 0.35) / 9;
+        fats =
+          Math.max(
+            targetCalories * 0.35,
+            (userProfileData.gender === "man" ? 50 : 40) * 9
+          ) / 9;
         carbs = (targetCalories - protein * 4 - fats * 9) / 4;
         break;
       case "keto":
         protein = 1.6 * userProfileData.weight;
-        fats = (targetCalories * 0.7) / 9;
+        fats =
+          Math.max(
+            targetCalories * 0.7,
+            (userProfileData.gender === "man" ? 50 : 40) * 9
+          ) / 9;
         carbs = Math.min(50, (targetCalories - protein * 4 - fats * 9) / 4);
         break;
       case "low_fat":
         protein = 2.2 * userProfileData.weight;
-        fats = (targetCalories * 0.15) / 9;
+        fats =
+          Math.max(
+            targetCalories * 0.15,
+            (userProfileData.gender === "man" ? 50 : 40) * 9
+          ) / 9;
         carbs = (targetCalories - protein * 4 - fats * 9) / 4;
         break;
       default:
@@ -676,12 +737,14 @@ export const createProfileData = async (userProfileData: UserData) => {
       trainingMacros = calculateMacros(
         trainingDayCalories,
         userProfileData.weight,
-        userProfileData.selectedStyle
+        userProfileData.selectedStyle,
+        userProfileData.gender
       );
       restMacros = calculateMacros(
         restDayCalories,
         userProfileData.weight,
-        userProfileData.selectedStyle
+        userProfileData.selectedStyle,
+        userProfileData.gender
       );
     }
 
@@ -691,12 +754,14 @@ export const createProfileData = async (userProfileData: UserData) => {
       weekdayMacros = calculateMacros(
         weekdayCalories,
         userProfileData.weight,
-        userProfileData.selectedStyle
+        userProfileData.selectedStyle,
+        userProfileData.gender
       );
       weekendMacros = calculateMacros(
         weekendCalories,
         userProfileData.weight,
-        userProfileData.selectedStyle
+        userProfileData.selectedStyle,
+        userProfileData.gender
       );
     }
 
@@ -713,6 +778,7 @@ export const createProfileData = async (userProfileData: UserData) => {
           ? {
               TrainingDayCalories: trainingDayCalories,
               RestDayCalories: restDayCalories,
+              AverageCalories: averageCalories,
               Training_Protein: trainingMacros?.protein,
               Training_Fats: trainingMacros?.fats,
               Training_Carbohydrates: trainingMacros?.carbs,
@@ -725,6 +791,7 @@ export const createProfileData = async (userProfileData: UserData) => {
           : {
               TrainingDayCalories: null,
               RestDayCalories: null,
+              AverageCalories: null,
               Training_Protein: null,
               Training_Fats: null,
               Training_Carbohydrates: null,
@@ -878,7 +945,7 @@ export const updateProfileData = async (userProfileData: any) => {
           "250g per week": 1925,
           "500g per week": 3850,
           "750g per week": 5775,
-          "1kg per week": -7700,
+          "1kg per week": 7700,
         },
       };
 
@@ -916,35 +983,67 @@ export const updateProfileData = async (userProfileData: any) => {
       let restDayCalories = targetCalories;
       let weekdayCalories = targetCalories;
       let weekendCalories = targetCalories;
+      let averageCalories;
       if (profileData.calorieCycling) {
-        trainingDayCalories = targetCalories * 1.1;
-        restDayCalories = targetCalories * 0.9;
+        const training_days = profileData.workouts_per_week;
+        const rest_days = 7 - training_days;
+
+        const training_day_factor = 7 / (2 * training_days + rest_days);
+        const rest_day_factor = 7 / (2 * rest_days + training_days);
+
+        const trainingDayCalories = targetCalories * (1 + training_day_factor);
+        restDayCalories = targetCalories * (1 - rest_day_factor);
+
+        const weekly_calories =
+          trainingDayCalories * training_days + restDayCalories * rest_days;
+        averageCalories = weekly_calories / 7;
       }
       if (profileData.calorieBanking) {
-        weekdayCalories = targetCalories * 0.9;
-        weekendCalories = targetCalories * 1.1;
+        weekdayCalories = targetCalories * 0.85;
+        weekendCalories = targetCalories * 1.3;
+        const minWeekdayCalories = targetCalories - 250;
+        if (weekdayCalories < minWeekdayCalories) {
+          weekdayCalories = minWeekdayCalories;
+          weekendCalories = (7 * targetCalories - weekdayCalories * 5) / 2;
+        }
       }
 
       let protein: number, fats: number, carbs: number;
       switch (profileData.nutrition_style) {
         case "balanced":
-          protein = 2 * userProfileData.weight;
-          fats = (targetCalories * 0.25) / 9;
+          protein = 2 * profileData.weight;
+          fats =
+            Math.max(
+              targetCalories * 0.25,
+              (userProfileData.gender === "man" ? 50 : 40) * 9
+            ) / 9;
           carbs = (targetCalories - protein * 4 - fats * 9) / 4;
           break;
         case "low_carb":
-          protein = 2.2 * userProfileData.weight;
-          fats = (targetCalories * 0.35) / 9;
+          protein = 2.2 * profileData.weight;
+          fats =
+            Math.max(
+              targetCalories * 0.35,
+              (userProfileData.gender === "man" ? 50 : 40) * 9
+            ) / 9;
           carbs = (targetCalories - protein * 4 - fats * 9) / 4;
           break;
         case "keto":
-          protein = 1.6 * userProfileData.weight;
-          fats = (targetCalories * 0.7) / 9;
+          protein = 1.6 * profileData.weight;
+          fats =
+            Math.max(
+              targetCalories * 0.7,
+              (userProfileData.gender === "man" ? 50 : 40) * 9
+            ) / 9;
           carbs = Math.min(50, (targetCalories - protein * 4 - fats * 9) / 4);
           break;
         case "low_fat":
-          protein = 2.2 * userProfileData.weight;
-          fats = (targetCalories * 0.15) / 9;
+          protein = 2.2 * profileData.weight;
+          fats =
+            Math.max(
+              targetCalories * 0.7,
+              (userProfileData.gender === "man" ? 50 : 40) * 9
+            ) / 9;
           carbs = (targetCalories - protein * 4 - fats * 9) / 4;
           break;
         default:
@@ -956,13 +1055,15 @@ export const updateProfileData = async (userProfileData: any) => {
       if (profileData.calorieCycling) {
         trainingMacros = calculateMacros(
           trainingDayCalories,
-          userProfileData.weight,
-          profileData.nutrition_style
+          profileData.weight,
+          profileData.nutrition_style,
+          profileData.gender
         );
         restMacros = calculateMacros(
           restDayCalories,
-          userProfileData.weight,
-          profileData.nutrition_style
+          profileData.weight,
+          profileData.nutrition_style,
+          profileData.gender
         );
       }
 
@@ -971,13 +1072,15 @@ export const updateProfileData = async (userProfileData: any) => {
       if (profileData.calorieBanking) {
         weekdayMacros = calculateMacros(
           weekdayCalories,
-          userProfileData.weight,
-          profileData.nutrition_style
+          profileData.weight,
+          profileData.nutrition_style,
+          profileData.gender
         );
         weekendMacros = calculateMacros(
           weekendCalories,
-          userProfileData.weight,
-          profileData.nutrition_style
+          profileData.weight,
+          profileData.nutrition_style,
+          profileData.gender
         );
       }
 
