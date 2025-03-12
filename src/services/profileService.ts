@@ -559,6 +559,8 @@ export const createProfileData = async (userProfileData: UserData) => {
       weightPerWeek = `${userProfileData.mode} ${userProfileData.selected}`;
     }
 
+    const age = calculateAge(userProfileData.dateOfBirth);
+
     const { data, error } = await supabase
       .from("Profile") // Replace with your table name
       .select("*") // You can select specific columns if needed
@@ -572,6 +574,7 @@ export const createProfileData = async (userProfileData: UserData) => {
           id: userProfileData.id,
           mail: userProfileData.mail,
           date_of_birth: userProfileData.dateOfBirth,
+          age: userProfileData.age,
           gender: userProfileData.gender,
           height: userProfileData.height,
           weight: userProfileData.weight,
@@ -599,6 +602,7 @@ export const createProfileData = async (userProfileData: UserData) => {
       .update({
         mail: userProfileData.mail,
         date_of_birth: userProfileData.dateOfBirth,
+        age: userProfileData.age,
         gender: userProfileData.gender,
         height: userProfileData.height,
         weight: userProfileData.weight,
@@ -620,8 +624,6 @@ export const createProfileData = async (userProfileData: UserData) => {
         `Error updating Profile data: ${profileDataError.message}`
       ); // Fixed error message
     }
-
-    const age = calculateAge(userProfileData.dateOfBirth);
 
     const bmr =
       userProfileData.gender === "man"
