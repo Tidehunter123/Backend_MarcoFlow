@@ -327,13 +327,13 @@ export const getProfileDataByProfileId = async (
       trainingMacros = calculateMacros(
         trainingDayCalories,
         profileData.weight,
-        profileData.selectedStyle,
+        profileData.nutrition_style,
         profileData.gender
       );
       restMacros = calculateMacros(
         restDayCalories,
         profileData.weight,
-        profileData.selectedStyle,
+        profileData.nutrition_style,
         profileData.gender
       );
     }
@@ -344,13 +344,13 @@ export const getProfileDataByProfileId = async (
       weekdayMacros = calculateMacros(
         weekdayCalories,
         profileData.weight,
-        profileData.selectedStyle,
+        profileData.nutrition_style,
         profileData.gender
       );
       weekendMacros = calculateMacros(
         weekendCalories,
         profileData.weight,
-        profileData.selectedStyle,
+        profileData.nutrition_style,
         profileData.gender
       );
     }
