@@ -251,6 +251,14 @@ export const getProfileDataByProfileId = async (
       )
     ];
 
+    console.log(
+      mode,
+      selected,
+      tdee,
+      profileData.training_goal,
+      "mode, selected"
+    );
+
     let targetCalories =
       rate_weight_change !== "None" &&
       weightChangeCalories[mode]?.[selected] !== undefined
@@ -674,6 +682,14 @@ export const createProfileData = async (userProfileData: UserData) => {
             7
         : tdee * goalDefaults[userProfileData.trainingGoal];
 
+    console.log(
+      userProfileData.mode,
+      userProfileData.selected,
+      tdee,
+      userProfileData.trainingGoal,
+      "userProfileData.mode,userProfileData.selected"
+    );
+
     let trainingDayCalories = targetCalories;
     let restDayCalories = targetCalories;
     let weekdayCalories = targetCalories;
@@ -985,6 +1001,14 @@ export const updateProfileData = async (userProfileData: any) => {
           | "1kg per week"
         )
       ];
+
+      console.log(
+        mode,
+        selected,
+        tdee,
+        profileData.training_goal,
+        "mode, selected"
+      );
 
       let targetCalories =
         rate_weight_change !== "None" &&
