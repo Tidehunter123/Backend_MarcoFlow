@@ -256,6 +256,7 @@ export const getProfileDataByProfileId = async (
       selected,
       tdee,
       profileData.training_goal,
+      weightChangeCalories[mode]?.[selected],
       "mode, selected"
     );
 
