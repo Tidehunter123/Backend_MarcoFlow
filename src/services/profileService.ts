@@ -333,13 +333,13 @@ export const getProfileDataByProfileId = async (
     if (profileData.calorieCycling) {
       trainingMacros = calculateMacros(
         trainingDayCalories,
-        profileData.weight,
+        initialWeight,
         profileData.nutrition_style,
         profileData.gender
       );
       restMacros = calculateMacros(
         restDayCalories,
-        profileData.weight,
+        initialWeight,
         profileData.nutrition_style,
         profileData.gender
       );
@@ -350,13 +350,13 @@ export const getProfileDataByProfileId = async (
     if (profileData.calorieBanking) {
       weekdayMacros = calculateMacros(
         weekdayCalories,
-        profileData.weight,
+        initialWeight,
         profileData.nutrition_style,
         profileData.gender
       );
       weekendMacros = calculateMacros(
         weekendCalories,
-        profileData.weight,
+        initialWeight,
         profileData.nutrition_style,
         profileData.gender
       );
