@@ -260,10 +260,17 @@ export const getProfileDataByProfileId = async (
     if (profileData.calorieCycling) {
       const trainingDays = profileData.workouts_per_week;
       const restDays = 7 - trainingDays;
-      const trainingDayFactor = 7 / (2 * trainingDays + restDays);
-      const restDayFactor = 7 / (2 * restDays + trainingDays);
-      trainingDayCalories = targetCalories * (1 + trainingDayFactor);
-      restDayCalories = targetCalories * (1 - restDayFactor);
+      // const trainingDayFactor = 7 / (2 * trainingDays + restDays);
+      // const restDayFactor = 7 / (2 * restDays + trainingDays);
+      // trainingDayCalories = targetCalories * (1 + trainingDayFactor);
+      // restDayCalories = targetCalories * (1 - restDayFactor);
+      const training_day_factor =
+        (7 * targetCalories) / (trainingDays * 1.1 + restDays * 0.9);
+      const rest_day_factor = training_day_factor * 0.9;
+
+      trainingDayCalories = training_day_factor * 1.1;
+      restDayCalories = training_day_factor * 0.9;
+
       const weekly_calories =
         trainingDayCalories * trainingDays + restDayCalories * restDays;
       averageCalories = weekly_calories / 7;
@@ -669,11 +676,12 @@ export const createProfileData = async (userProfileData: UserData) => {
       const training_days = userProfileData.workoutsPerWeek;
       const rest_days = 7 - training_days;
 
-      const training_day_factor = 7 / (2 * training_days + rest_days);
-      const rest_day_factor = 7 / (2 * rest_days + training_days);
+      const training_day_factor =
+        (7 * targetCalories) / (training_days * 1.1 + rest_days * 0.9);
+      const rest_day_factor = training_day_factor * 0.9;
 
-      trainingDayCalories = targetCalories * (1 + training_day_factor);
-      restDayCalories = targetCalories * (1 - rest_day_factor);
+      trainingDayCalories = training_day_factor * 1.1;
+      restDayCalories = training_day_factor * 0.9;
 
       const weekly_calories =
         trainingDayCalories * training_days + restDayCalories * rest_days;
@@ -988,11 +996,18 @@ export const updateProfileData = async (userProfileData: any) => {
         const training_days = profileData.workouts_per_week;
         const rest_days = 7 - training_days;
 
-        const training_day_factor = 7 / (2 * training_days + rest_days);
-        const rest_day_factor = 7 / (2 * rest_days + training_days);
+        // const training_day_factor = 7 / (2 * training_days + rest_days);
+        // const rest_day_factor = 7 / (2 * rest_days + training_days);
 
-        const trainingDayCalories = targetCalories * (1 + training_day_factor);
-        restDayCalories = targetCalories * (1 - rest_day_factor);
+        // const trainingDayCalories = targetCalories * (1 + training_day_factor);
+        // restDayCalories = targetCalories * (1 - rest_day_factor);
+
+        const training_day_factor =
+          (7 * targetCalories) / (training_days * 1.1 + rest_days * 0.9);
+        const rest_day_factor = training_day_factor * 0.9;
+
+        trainingDayCalories = training_day_factor * 1.1;
+        restDayCalories = training_day_factor * 0.9;
 
         const weekly_calories =
           trainingDayCalories * training_days + restDayCalories * rest_days;
