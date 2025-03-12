@@ -170,8 +170,11 @@ export const getProfileDataByProfileId = async (
   }
 
   const initialWeight = profileData.weight; // Starting weight, e.g., 90kg
+  console.log(initialWeight, "initialWeight");
   const weeks = 41;
   let currentWeight = initialWeight;
+
+  console.log(currentWeight, "currentWeight");
   const simulationOutput = [];
 
   for (let week = 0; week < weeks; week++) {
@@ -180,6 +183,10 @@ export const getProfileDataByProfileId = async (
       profileData.gender === "man"
         ? 10 * currentWeight + 6.25 * profileData.height - 5 * age + 5
         : 10 * currentWeight + 6.25 * profileData.height - 5 * age - 161;
+
+    console.log(currentWeight, "currentWeight");
+
+    console.log(bmr, "bmr");
 
     // Calculate TDEE
     const activityMultipliers = {
@@ -918,6 +925,7 @@ export const updateProfileData = async (userProfileData: any) => {
             5 * age -
             161;
 
+      console.log(bmr, "bmr");
       const activityMultipliers = {
         sedentary: 1.13,
         active: 1.25,

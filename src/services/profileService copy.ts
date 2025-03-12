@@ -154,6 +154,8 @@ export const getProfileDataByProfileId = async (profileId: string) => {
     throw new Error(`Error fetching profile data: ${ProfileError.message}`);
   }
 
+  console.log(ProfileData, "Fetched profileData");
+
   // Fetch Calculation Data
   const { data: CalculationData, error: CalculationDataError } = await supabase
     .from("CalculationData")
@@ -527,6 +529,7 @@ export const createProfileData = async (userProfileData: UserData) => {
 
 export const updateProfileData = async (userProfileData: any) => {
   try {
+    console.log("Fetching profile data from Supabase...");
     const { data: profileData, error: profileDataError } = await supabase
       .from("Profile")
       .select()
@@ -550,6 +553,8 @@ export const updateProfileData = async (userProfileData: any) => {
           ? 10 * profileData.weight + 6.25 * profileData.height - 5 * age + 5
           : 10 * profileData.weight + 6.25 * profileData.height - 5 * age - 161;
 
+      console.log(bmr, "Calculated BMR");
+
       const activityMultipliers = {
         sedentary: 1.13,
         active: 1.25,
@@ -560,6 +565,8 @@ export const updateProfileData = async (userProfileData: any) => {
         activityMultipliers[
           profileData.activity_level as keyof typeof activityMultipliers
         ];
+
+      console.log(tdee, "Calculated TDEE");
 
       const workoutCalories = {
         beginner: 300,
