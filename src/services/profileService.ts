@@ -556,7 +556,7 @@ export const createProfileData = async (userProfileData: UserData) => {
     if (userProfileData.selected === null) {
       weightPerWeek = "None";
     } else {
-      weightPerWeek = `${userProfileData.mode}  ${userProfileData.selected}`;
+      weightPerWeek = `${userProfileData.mode} ${userProfileData.selected}`;
     }
 
     const { data, error } = await supabase
