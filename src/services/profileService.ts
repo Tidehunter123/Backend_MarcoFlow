@@ -621,15 +621,17 @@ export const createProfileData = async (userProfileData: UserData) => {
       ); // Fixed error message
     }
 
+    const age = calculateAge(userProfileData.dateOfBirth);
+
     const bmr =
       userProfileData.gender === "man"
         ? 10 * userProfileData.weight +
           6.25 * userProfileData.height -
-          5 * userProfileData.age +
+          5 * age +
           5
         : 10 * userProfileData.weight +
           6.25 * userProfileData.height -
-          5 * userProfileData.age -
+          5 * age -
           161;
 
     const activityMultipliers = {
