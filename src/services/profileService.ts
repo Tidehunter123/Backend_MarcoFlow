@@ -1034,38 +1034,38 @@ export const updateProfileData = async (userProfileData: any) => {
       let protein: number, fats: number, carbs: number;
       switch (profileData.nutrition_style) {
         case "balanced":
-          protein = 2 * profileData.weight;
+          protein = 2 * userProfileData.weight;
           fats =
             Math.max(
               targetCalories * 0.25,
-              (userProfileData.gender === "man" ? 50 : 40) * 9
+              (profileData.gender === "man" ? 50 : 40) * 9
             ) / 9;
           carbs = (targetCalories - protein * 4 - fats * 9) / 4;
           break;
         case "low_carb":
-          protein = 2.2 * profileData.weight;
+          protein = 2.2 * userProfileData.weight;
           fats =
             Math.max(
               targetCalories * 0.35,
-              (userProfileData.gender === "man" ? 50 : 40) * 9
+              (profileData.gender === "man" ? 50 : 40) * 9
             ) / 9;
           carbs = (targetCalories - protein * 4 - fats * 9) / 4;
           break;
         case "keto":
-          protein = 1.6 * profileData.weight;
+          protein = 1.6 * userProfileData.weight;
           fats =
             Math.max(
               targetCalories * 0.7,
-              (userProfileData.gender === "man" ? 50 : 40) * 9
+              (profileData.gender === "man" ? 50 : 40) * 9
             ) / 9;
           carbs = Math.min(50, (targetCalories - protein * 4 - fats * 9) / 4);
           break;
         case "low_fat":
-          protein = 2.2 * profileData.weight;
+          protein = 2.2 * userProfileData.weight;
           fats =
             Math.max(
               targetCalories * 0.7,
-              (userProfileData.gender === "man" ? 50 : 40) * 9
+              (profileData.gender === "man" ? 50 : 40) * 9
             ) / 9;
           carbs = (targetCalories - protein * 4 - fats * 9) / 4;
           break;
@@ -1078,13 +1078,13 @@ export const updateProfileData = async (userProfileData: any) => {
       if (profileData.calorieCycling) {
         trainingMacros = calculateMacros(
           trainingDayCalories,
-          profileData.weight,
+          userProfileData.weight,
           profileData.nutrition_style,
           profileData.gender
         );
         restMacros = calculateMacros(
           restDayCalories,
-          profileData.weight,
+          userProfileData.weight,
           profileData.nutrition_style,
           profileData.gender
         );
@@ -1095,13 +1095,13 @@ export const updateProfileData = async (userProfileData: any) => {
       if (profileData.calorieBanking) {
         weekdayMacros = calculateMacros(
           weekdayCalories,
-          profileData.weight,
+          userProfileData.weight,
           profileData.nutrition_style,
           profileData.gender
         );
         weekendMacros = calculateMacros(
           weekendCalories,
-          profileData.weight,
+          userProfileData.weight,
           profileData.nutrition_style,
           profileData.gender
         );
