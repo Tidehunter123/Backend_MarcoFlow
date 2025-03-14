@@ -26,6 +26,7 @@
     "axios": "^1.7.9",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
+    "dayjs": "^1.11.13",
     "dotenv": "^16.4.5",
     "http-status": "^1.8.0",
     "moment": "^2.30.1",

@@ -1,4 +1,5 @@
 import { UUID } from "crypto";
+import dayjs from "dayjs";
 import { supabase } from "../config/superbaseConfig";
 import OpenAI from "openai";
 
@@ -911,7 +912,12 @@ export const createProfileData = async (userProfileData: UserData) => {
     const { data: trackData, error: trackDataError } = await supabase
       .from("CalculationData")
       .update({
-        weight_track: [userProfileData.weight],
+        weight_track: [
+          {
+            date: dayjs(new Date()).format("DD-MM-YYYY hh:mm"),
+            weight: userProfileData.weight,
+          },
+        ],
         BMR_track: [bmr],
         Total_track: [tdee],
         Target_track: [targetCalories],
@@ -1050,12 +1056,6 @@ export const updateProfileData = async (userProfileData: any) => {
       if (profileData.calorieCycling) {
         const training_days = profileData.workouts_per_week;
         const rest_days = 7 - training_days;
-
-        // const training_day_factor = 7 / (2 * training_days + rest_days);
-        // const rest_day_factor = 7 / (2 * rest_days + training_days);
-
-        // const trainingDayCalories = targetCalories * (1 + training_day_factor);
-        // restDayCalories = targetCalories * (1 - rest_day_factor);
 
         const training_day_factor =
           (7 * targetCalories) / (training_days * 1.1 + rest_days * 0.9);
@@ -1256,7 +1256,10 @@ export const updateProfileData = async (userProfileData: any) => {
         existingCalculationData.Target_track
       );
 
-      existingCalculationData.weight_track.push(userProfileData.weight);
+      existingCalculationData.weight_track.push({
+        date: dayjs(new Date()).format("DD-MM-YYYY hh:mm"),
+        weight: userProfileData.weight,
+      });
       existingCalculationData.BMR_track.push(bmr);
       existingCalculationData.Total_track.push(tdee);
       existingCalculationData.Target_track.push(targetCalories);
