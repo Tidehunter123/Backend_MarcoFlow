@@ -602,7 +602,7 @@ export const createProfileData = async (userProfileData: UserData) => {
       .update({
         mail: userProfileData.mail,
         date_of_birth: userProfileData.dateOfBirth,
-        age: userProfileData.age,
+        age: age,
         gender: userProfileData.gender,
         height: userProfileData.height,
         weight: userProfileData.weight,
@@ -908,6 +908,24 @@ export const createProfileData = async (userProfileData: UserData) => {
       }
     }
 
+    const { data: trackData, error: trackDataError } = await supabase
+      .from("CalculationData")
+      .update({
+        weight_track: [userProfileData.weight],
+        BMR_track: [bmr],
+        Total_track: [tdee],
+        Target_track: [targetCalories],
+        Train_track: [trainingDayCalories],
+        Rest_track: [restDayCalories],
+        Weekday_track: [weekdayCalories],
+        Weekend_track: [weekendCalories],
+      })
+      .eq("id", userProfileData.id)
+      .select()
+      .single();
+    if (trackDataError) {
+      throw new Error(`Error updating Track data: ${trackDataError.message}`);
+    }
     return jsonData;
   } catch (error) {
     console.error("Error fetching profile data:", error);
@@ -1216,12 +1234,51 @@ export const updateProfileData = async (userProfileData: any) => {
 
       console.log(ProfileData, "ProfileData");
 
+      const { data: existingCalculationData, error: existingCalculationError } =
+        await supabase
+          .from("CalculationData") // Replace with your table name
+          .select("*") // You can select specific columns if needed
+          .eq("id", userProfileData.id)
+          .single(); // Ensure only one record is returned
+
+      if (existingCalculationError) {
+        throw new Error(
+          `Error creating Profile data: ${existingCalculationError.message}`
+        );
+      }
+
+      console.log(
+        existingCalculationData,
+        "existingCalculationData",
+        existingCalculationData.weight_track,
+        existingCalculationData.BMR_track,
+        existingCalculationData.Total_track,
+        existingCalculationData.Target_track
+      );
+
+      existingCalculationData.weight_track.push(userProfileData.weight);
+      existingCalculationData.BMR_track.push(bmr);
+      existingCalculationData.Total_track.push(tdee);
+      existingCalculationData.Target_track.push(targetCalories);
+      existingCalculationData.Train_track.push(trainingDayCalories);
+      existingCalculationData.Rest_track.push(restDayCalories);
+      existingCalculationData.Weekday_track.push(weekdayCalories);
+      existingCalculationData.Weekend_track.push(weekendCalories);
+
       const { data: CalculationData, error: CalculationDataError } =
         await supabase
           .from("CalculationData")
           .update({
             json_data: jsonData,
             updated_at: new Date().toISOString(),
+            weight_track: existingCalculationData.weight_track,
+            BMR_track: existingCalculationData.BMR_track,
+            Total_track: existingCalculationData.Total_track,
+            Target_track: existingCalculationData.Target_track,
+            Train_track: existingCalculationData.Train_track,
+            Rest_track: existingCalculationData.Rest_track,
+            Weekday_track: existingCalculationData.Weekday_track,
+            Weekend_track: existingCalculationData.Weekend_track,
           })
           .eq("id", userProfileData.id)
           .select()
